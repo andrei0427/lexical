@@ -76,7 +76,6 @@ import * as React from 'react';
 import {IS_APPLE} from 'shared/environment';
 
 import useModal from '../../hooks/useModal';
-import catTypingGif from '../../images/cat-typing.gif';
 import {$createStickyNode} from '../../nodes/StickyNode';
 import DropDown, {DropDownItem} from '../../ui/DropDown';
 import DropdownColorPicker from '../../ui/DropdownColorPicker';
@@ -95,6 +94,7 @@ import {InsertInlineImageDialog} from '../InlineImagePlugin';
 import {INSERT_PAGE_BREAK} from '../PageBreakPlugin';
 import {InsertPollDialog} from '../PollPlugin';
 import {InsertNewTableDialog, InsertTableDialog} from '../TablePlugin';
+import TextInput from '../../ui/TextInput';
 
 const blockTypeToBlockName = {
   bullet: 'Bulleted List',
@@ -171,6 +171,10 @@ const ELEMENT_FORMAT_OPTIONS: {
   right: {
     icon: 'right-align',
     name: 'Right Align',
+  },
+  start: {
+    icon: 'left-align',
+    name: 'Left Align',
   },
 };
 
@@ -283,7 +287,6 @@ function BlockFormatDropDown({
       disabled={disabled}
       buttonClassName="toolbar-item block-controls"
       buttonIconClassName={'icon block-type ' + blockType}
-      buttonLabel={blockTypeToBlockName[blockType]}
       buttonAriaLabel="Formatting options for text style">
       <DropDownItem
         className={'item ' + dropDownActiveClass(blockType === 'paragraph')}
@@ -398,6 +401,32 @@ function FontDropDown({
           </DropDownItem>
         ),
       )}
+      {style === 'font-family' ? (
+        <DropDownItem
+          className={`item ${dropDownActiveClass(
+            !FONT_FAMILY_OPTIONS.some(([option]) => option === value),
+          )}`}
+          key="custom">
+          <div
+            className="text"
+            style={{display: 'flex', flexDirection: 'column'}}>
+            <TextInput
+              label="Name"
+              value=""
+              type="text"
+              placeholder="Roboto"
+              onChange={() => {}}
+            />
+            <TextInput
+              label="URL"
+              value=""
+              type="url"
+              placeholder="https://fonts.googleapis.com/css2?family=Lexend&family=Roboto&display=swap"
+              onChange={() => {}}
+            />
+          </div>
+        </DropDownItem>
+      ) : null}
     </DropDown>
   );
 }
@@ -416,7 +445,6 @@ function ElementFormatDropdown({
   return (
     <DropDown
       disabled={disabled}
-      buttonLabel={ELEMENT_FORMAT_OPTIONS[value].name}
       buttonIconClassName={`icon ${ELEMENT_FORMAT_OPTIONS[value].icon}`}
       buttonClassName="toolbar-item spaced alignment"
       buttonAriaLabel="Formatting options for text alignment">
@@ -496,8 +524,6 @@ export default function ToolbarPlugin(): JSX.Element {
   const [isSubscript, setIsSubscript] = useState(false);
   const [isSuperscript, setIsSuperscript] = useState(false);
   const [isCode, setIsCode] = useState(false);
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
   const [modal, showModal] = useModal();
   const [isRTL, setIsRTL] = useState(false);
   const [codeLanguage, setCodeLanguage] = useState<string>('');
@@ -623,22 +649,6 @@ export default function ToolbarPlugin(): JSX.Element {
           $updateToolbar();
         });
       }),
-      activeEditor.registerCommand<boolean>(
-        CAN_UNDO_COMMAND,
-        (payload) => {
-          setCanUndo(payload);
-          return false;
-        },
-        COMMAND_PRIORITY_CRITICAL,
-      ),
-      activeEditor.registerCommand<boolean>(
-        CAN_REDO_COMMAND,
-        (payload) => {
-          setCanRedo(payload);
-          return false;
-        },
-        COMMAND_PRIORITY_CRITICAL,
-      ),
     );
   }, [$updateToolbar, activeEditor, editor]);
 
@@ -749,35 +759,12 @@ export default function ToolbarPlugin(): JSX.Element {
     },
     [activeEditor, selectedElementKey],
   );
-  const insertGifOnClick = (payload: InsertImagePayload) => {
-    activeEditor.dispatchCommand(INSERT_IMAGE_COMMAND, payload);
-  };
+  // const insertGifOnClick = (payload: InsertImagePayload) => {
+  //   activeEditor.dispatchCommand(INSERT_IMAGE_COMMAND, payload);
+  // };
 
   return (
     <div className="toolbar">
-      <button
-        disabled={!canUndo || !isEditable}
-        onClick={() => {
-          activeEditor.dispatchCommand(UNDO_COMMAND, undefined);
-        }}
-        title={IS_APPLE ? 'Undo (⌘Z)' : 'Undo (Ctrl+Z)'}
-        type="button"
-        className="toolbar-item spaced"
-        aria-label="Undo">
-        <i className="format undo" />
-      </button>
-      <button
-        disabled={!canRedo || !isEditable}
-        onClick={() => {
-          activeEditor.dispatchCommand(REDO_COMMAND, undefined);
-        }}
-        title={IS_APPLE ? 'Redo (⌘Y)' : 'Redo (Ctrl+Y)'}
-        type="button"
-        className="toolbar-item"
-        aria-label="Redo">
-        <i className="format redo" />
-      </button>
-      <Divider />
       {blockType in blockTypeToBlockName && activeEditor === editor && (
         <>
           <BlockFormatDropDown
@@ -952,29 +939,9 @@ export default function ToolbarPlugin(): JSX.Element {
             </DropDownItem>
           </DropDown>
           <Divider />
-          {rootType === 'table' && (
-            <>
-              <DropDown
-                disabled={!isEditable}
-                buttonClassName="toolbar-item spaced"
-                buttonLabel="Table"
-                buttonAriaLabel="Open table toolkit"
-                buttonIconClassName="icon table secondary">
-                <DropDownItem
-                  onClick={() => {
-                    /**/
-                  }}
-                  className="item">
-                  <span className="text">TODO</span>
-                </DropDownItem>
-              </DropDown>
-              <Divider />
-            </>
-          )}
           <DropDown
             disabled={!isEditable}
             buttonClassName="toolbar-item spaced"
-            buttonLabel="Insert"
             buttonAriaLabel="Insert specialized editor node"
             buttonIconClassName="icon plus">
             <DropDownItem
@@ -987,14 +954,6 @@ export default function ToolbarPlugin(): JSX.Element {
               className="item">
               <i className="icon horizontal-rule" />
               <span className="text">Horizontal Rule</span>
-            </DropDownItem>
-            <DropDownItem
-              onClick={() => {
-                activeEditor.dispatchCommand(INSERT_PAGE_BREAK, undefined);
-              }}
-              className="item">
-              <i className="icon page-break" />
-              <span className="text">Page Break</span>
             </DropDownItem>
             <DropDownItem
               onClick={() => {
@@ -1021,17 +980,6 @@ export default function ToolbarPlugin(): JSX.Element {
               className="item">
               <i className="icon image" />
               <span className="text">Inline Image</span>
-            </DropDownItem>
-            <DropDownItem
-              onClick={() =>
-                insertGifOnClick({
-                  altText: 'Cat typing on a laptop',
-                  src: catTypingGif,
-                })
-              }
-              className="item">
-              <i className="icon gif" />
-              <span className="text">GIF</span>
             </DropDownItem>
             <DropDownItem
               onClick={() => {
@@ -1070,19 +1018,6 @@ export default function ToolbarPlugin(): JSX.Element {
               <i className="icon table" />
               <span className="text">Table (Experimental)</span>
             </DropDownItem>
-            <DropDownItem
-              onClick={() => {
-                showModal('Insert Poll', (onClose) => (
-                  <InsertPollDialog
-                    activeEditor={activeEditor}
-                    onClose={onClose}
-                  />
-                ));
-              }}
-              className="item">
-              <i className="icon poll" />
-              <span className="text">Poll</span>
-            </DropDownItem>
 
             <DropDownItem
               onClick={() => {
@@ -1096,18 +1031,6 @@ export default function ToolbarPlugin(): JSX.Element {
               className="item">
               <i className="icon equation" />
               <span className="text">Equation</span>
-            </DropDownItem>
-            <DropDownItem
-              onClick={() => {
-                editor.update(() => {
-                  const root = $getRoot();
-                  const stickyNode = $createStickyNode(0, 0);
-                  root.append(stickyNode);
-                });
-              }}
-              className="item">
-              <i className="icon sticky" />
-              <span className="text">Sticky Note</span>
             </DropDownItem>
             <DropDownItem
               onClick={() => {

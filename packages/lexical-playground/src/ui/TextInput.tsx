@@ -39,6 +39,9 @@ export default function TextInput({
         onChange={(e) => {
           onChange(e.target.value);
         }}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
         data-test-id={dataTestId}
       />
     </div>

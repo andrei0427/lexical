@@ -183,8 +183,10 @@ export default defineConfig({
   resolve: {
     alias: moduleResolution,
   },
+  base:'/static/',
   build: {
     outDir: 'build',
+    assetsDir: 'lexical',
     rollupOptions: {
       input: {
         main: new URL('./index.html', import.meta.url).pathname,

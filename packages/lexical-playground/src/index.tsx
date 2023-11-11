@@ -6,15 +6,14 @@
  *
  */
 
-import './setupEnv';
 import './index.css';
+import './setupEnv';
 
 import * as React from 'react';
 import {createRoot} from 'react-dom/client';
 
 import App from './App';
 
-// Handle runtime errors
 const showErrorOverlay = (err: Event) => {
   const ErrorOverlay = customElements.get('vite-error-overlay');
   if (!ErrorOverlay) {
@@ -32,8 +31,12 @@ window.addEventListener('unhandledrejection', ({reason}) =>
   showErrorOverlay(reason),
 );
 
-createRoot(document.getElementById('root') as HTMLElement).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+function initLexical() {
+  createRoot(document.getElementById('root') as HTMLElement).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
+}
+
+window.addEventListener('initlexical', initLexical);

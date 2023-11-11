@@ -8,6 +8,7 @@
 
 import type {LexicalComposerContextType} from '@lexical/react/LexicalComposerContext';
 
+import {$generateHtmlFromNodes, $generateNodesFromDOM} from '@lexical/html';
 import {
   createLexicalComposerContext,
   LexicalComposerContext,
@@ -16,6 +17,7 @@ import {
   $createParagraphNode,
   $getRoot,
   $getSelection,
+  $insertNodes,
   createEditor,
   EditorState,
   EditorThemeClasses,
@@ -27,6 +29,8 @@ import {useMemo} from 'react';
 import * as React from 'react';
 import {CAN_USE_DOM} from 'shared/canUseDOM';
 import useLayoutEffect from 'shared/useLayoutEffect';
+
+import {useLocalStorage} from './shared/useLocalStorage';
 
 const HISTORY_MERGE_OPTIONS = {tag: 'history-merge'};
 
@@ -61,6 +65,19 @@ type Props = {
 };
 
 export function LexicalComposer({initialConfig, children}: Props): JSX.Element {
+  const [storedHtmlContent, setStoredHtmlContent] = useLocalStorage<
+    string | null
+  >('editor-html-content', null);
+
+  let htmlContent = storedHtmlContent;
+
+  if (!htmlContent) {
+    const hiddenElm = document.getElementById('editor-content');
+
+    if (hiddenElm) {
+      htmlContent = hiddenElm.getAttribute('value');
+    }
+  }
   const composerContext: [LexicalEditor, LexicalComposerContextType] = useMemo(
     () => {
       const {
@@ -87,10 +104,36 @@ export function LexicalComposer({initialConfig, children}: Props): JSX.Element {
           onError: (error) => onError(error, newEditor),
           theme,
         });
-        initializeEditor(newEditor, initialEditorState);
+
+        if (htmlContent) {
+          initializeEditor(newEditor, (edtr) => {
+            const parser = new DOMParser();
+            const dom = parser.parseFromString(htmlContent!, 'text/html');
+            const parsedNodes = $generateNodesFromDOM(edtr, dom);
+
+            $insertNodes(parsedNodes);
+          });
+        } else {
+          initializeEditor(newEditor, initialEditorState);
+        }
 
         editor = newEditor;
       }
+
+      editor.registerUpdateListener(({editorState}) => {
+        editorState.read(() => {
+          const html = $generateHtmlFromNodes(editor!);
+          setStoredHtmlContent(html);
+
+          const inputElm = document.getElementById('editor-content');
+
+          if (!inputElm) {
+            return;
+          }
+
+          inputElm.setAttribute('value', html);
+        });
+      });
 
       return [editor, context];
     },
