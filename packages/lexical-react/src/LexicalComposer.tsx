@@ -21,9 +21,11 @@ import {
   createEditor,
   EditorState,
   EditorThemeClasses,
+  HTMLConfig,
   Klass,
   LexicalEditor,
   LexicalNode,
+  LexicalNodeReplacement,
 } from 'lexical';
 import {useMemo} from 'react';
 import * as React from 'react';
@@ -43,20 +45,12 @@ export type InitialEditorStateType =
 export type InitialConfigType = Readonly<{
   editor__DEPRECATED?: LexicalEditor | null;
   namespace: string;
-  nodes?: ReadonlyArray<
-    | Klass<LexicalNode>
-    | {
-        replace: Klass<LexicalNode>;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        with: <T extends {new (...args: any): any}>(
-          node: InstanceType<T>,
-        ) => LexicalNode;
-      }
-  >;
+  nodes?: ReadonlyArray<Klass<LexicalNode> | LexicalNodeReplacement>;
   onError: (error: Error, editor: LexicalEditor) => void;
   editable?: boolean;
   theme?: EditorThemeClasses;
   editorState?: InitialEditorStateType;
+  html?: HTMLConfig;
 }>;
 
 type Props = {
@@ -87,6 +81,7 @@ export function LexicalComposer({initialConfig, children}: Props): JSX.Element {
         nodes,
         onError,
         editorState: initialEditorState,
+        html,
       } = initialConfig;
 
       const context: LexicalComposerContextType = createLexicalComposerContext(
@@ -99,6 +94,7 @@ export function LexicalComposer({initialConfig, children}: Props): JSX.Element {
       if (editor === null) {
         const newEditor = createEditor({
           editable: initialConfig.editable,
+          html,
           namespace,
           nodes,
           onError: (error) => onError(error, newEditor),

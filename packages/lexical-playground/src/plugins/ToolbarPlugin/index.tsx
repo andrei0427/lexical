@@ -6,8 +6,6 @@
  *
  */
 
-import type {ElementFormatType, LexicalEditor, NodeKey} from 'lexical';
-
 import {
   $createCodeNode,
   $isCodeNode,
@@ -62,16 +60,19 @@ import {
   COMMAND_PRIORITY_CRITICAL,
   COMMAND_PRIORITY_NORMAL,
   DEPRECATED_$isGridSelection,
+  ElementFormatType,
   FORMAT_ELEMENT_COMMAND,
   FORMAT_TEXT_COMMAND,
   INDENT_CONTENT_COMMAND,
   KEY_MODIFIER_COMMAND,
+  LexicalEditor,
+  NodeKey,
   OUTDENT_CONTENT_COMMAND,
   REDO_COMMAND,
   SELECTION_CHANGE_COMMAND,
   UNDO_COMMAND,
 } from 'lexical';
-import {useCallback, useEffect, useState} from 'react';
+import {Dispatch, useCallback, useEffect, useState} from 'react';
 import * as React from 'react';
 import {IS_APPLE} from 'shared/environment';
 
@@ -91,6 +92,7 @@ import {
   InsertImagePayload,
 } from '../ImagesPlugin';
 import {InsertInlineImageDialog} from '../InlineImagePlugin';
+import InsertLayoutDialog from '../LayoutPlugin/InsertLayoutDialog';
 import {INSERT_PAGE_BREAK} from '../PageBreakPlugin';
 import {InsertPollDialog} from '../PollPlugin';
 import {InsertNewTableDialog, InsertTableDialog} from '../TablePlugin';
@@ -154,27 +156,41 @@ const FONT_SIZE_OPTIONS: [string, string][] = [
 ];
 
 const ELEMENT_FORMAT_OPTIONS: {
-  [key: string]: {icon: string; name: string};
+  [key in Exclude<ElementFormatType, ''>]: {
+    icon: string;
+    iconRTL: string;
+    name: string;
+  };
 } = {
   center: {
     icon: 'center-align',
+    iconRTL: 'right-align',
     name: 'Center Align',
+  },
+  end: {
+    icon: 'right-align',
+    iconRTL: 'left-align',
+    name: 'End Align',
   },
   justify: {
     icon: 'justify-align',
+    iconRTL: 'justify-align',
     name: 'Justify Align',
   },
   left: {
     icon: 'left-align',
+    iconRTL: 'left-align',
     name: 'Left Align',
   },
   right: {
     icon: 'right-align',
+    iconRTL: 'left-align',
     name: 'Right Align',
   },
   start: {
     icon: 'left-align',
-    name: 'Left Align',
+    iconRTL: 'right-align',
+    name: 'Start Align',
   },
 };
 
@@ -365,7 +381,10 @@ function FontDropDown({
     (option: string) => {
       editor.update(() => {
         const selection = $getSelection();
-        if ($isRangeSelection(selection)) {
+        if (
+          $isRangeSelection(selection) ||
+          DEPRECATED_$isGridSelection(selection)
+        ) {
           $patchStyleText(selection, {
             [style]: option,
           });
@@ -401,32 +420,33 @@ function FontDropDown({
           </DropDownItem>
         ),
       )}
-      {style === 'font-family' ? (
-        <DropDownItem
-          className={`item ${dropDownActiveClass(
-            !FONT_FAMILY_OPTIONS.some(([option]) => option === value),
-          )}`}
-          key="custom">
-          <div
-            className="text"
-            style={{display: 'flex', flexDirection: 'column'}}>
-            <TextInput
-              label="Name"
-              value=""
-              type="text"
-              placeholder="Roboto"
-              onChange={() => {}}
-            />
-            <TextInput
-              label="URL"
-              value=""
-              type="url"
-              placeholder="https://fonts.googleapis.com/css2?family=Lexend&family=Roboto&display=swap"
-              onChange={() => {}}
-            />
-          </div>
-        </DropDownItem>
-      ) : null}
+      {style === 'font-family'
+        ? // <DropDownItem
+          //   className={`item ${dropDownActiveClass(
+          //     !FONT_FAMILY_OPTIONS.some(([option]) => option === value),
+          //   )}`}
+          //   key="custom">
+          //   <div
+          //     className="text"
+          //     style={{display: 'flex', flexDirection: 'column'}}>
+          //     <TextInput
+          //       label="Name"
+          //       value=""
+          //       type="text"
+          //       placeholder="Roboto"
+          //       onChange={() => {}}
+          //     />
+          //     <TextInput
+          //       label="URL"
+          //       value=""
+          //       type="url"
+          //       placeholder="https://fonts.googleapis.com/css2?family=Lexend&family=Roboto&display=swap"
+          //       onChange={() => {}}
+          //     />
+          //   </div>
+          // </DropDownItem>
+          null
+        : null}
     </DropDown>
   );
 }
@@ -442,10 +462,15 @@ function ElementFormatDropdown({
   isRTL: boolean;
   disabled: boolean;
 }) {
+  const formatOption = ELEMENT_FORMAT_OPTIONS[value || 'left'];
+
   return (
     <DropDown
       disabled={disabled}
-      buttonIconClassName={`icon ${ELEMENT_FORMAT_OPTIONS[value].icon}`}
+      buttonLabel={formatOption.name}
+      buttonIconClassName={`icon ${
+        isRTL ? formatOption.iconRTL : formatOption.icon
+      }`}
       buttonClassName="toolbar-item spaced alignment"
       buttonAriaLabel="Formatting options for text alignment">
       <DropDownItem
@@ -480,6 +505,34 @@ function ElementFormatDropdown({
         <i className="icon justify-align" />
         <span className="text">Justify Align</span>
       </DropDownItem>
+      <DropDownItem
+        onClick={() => {
+          editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'start');
+        }}
+        className="item">
+        <i
+          className={`icon ${
+            isRTL
+              ? ELEMENT_FORMAT_OPTIONS.start.iconRTL
+              : ELEMENT_FORMAT_OPTIONS.start.icon
+          }`}
+        />
+        <span className="text">Start Align</span>
+      </DropDownItem>
+      <DropDownItem
+        onClick={() => {
+          editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'end');
+        }}
+        className="item">
+        <i
+          className={`icon ${
+            isRTL
+              ? ELEMENT_FORMAT_OPTIONS.end.iconRTL
+              : ELEMENT_FORMAT_OPTIONS.end.icon
+          }`}
+        />
+        <span className="text">End Align</span>
+      </DropDownItem>
       <Divider />
       <DropDownItem
         onClick={() => {
@@ -501,7 +554,11 @@ function ElementFormatDropdown({
   );
 }
 
-export default function ToolbarPlugin(): JSX.Element {
+export default function ToolbarPlugin({
+  setIsLinkEditMode,
+}: {
+  setIsLinkEditMode: Dispatch<boolean>;
+}): JSX.Element {
   const [editor] = useLexicalComposerContext();
   const [activeEditor, setActiveEditor] = useState(editor);
   const [blockType, setBlockType] =
@@ -619,10 +676,22 @@ export default function ToolbarPlugin(): JSX.Element {
       setFontFamily(
         $getSelectionStyleValueForProperty(selection, 'font-family', 'Arial'),
       );
+      let matchingParent;
+      if ($isLinkNode(parent)) {
+        // If node is a link, we need to fetch the parent paragraph node to set format
+        matchingParent = $findMatchingParent(
+          node,
+          (parentNode) => $isElementNode(parentNode) && !parentNode.isInline(),
+        );
+      }
+
+      // If matchingParent is a valid node, pass it's format type
       setElementFormat(
-        ($isElementNode(node)
+        $isElementNode(matchingParent)
+          ? matchingParent.getFormatType()
+          : $isElementNode(node)
           ? node.getFormatType()
-          : parent?.getFormatType()) || 'left',
+          : parent?.getFormatType() || 'left',
       );
     }
   }, [activeEditor]);
@@ -661,6 +730,11 @@ export default function ToolbarPlugin(): JSX.Element {
 
         if (code === 'KeyK' && (ctrlKey || metaKey)) {
           event.preventDefault();
+          if (!isLink) {
+            setIsLinkEditMode(true);
+          } else {
+            setIsLinkEditMode(false);
+          }
           return activeEditor.dispatchCommand(
             TOGGLE_LINK_COMMAND,
             sanitizeUrl('https://'),
@@ -670,13 +744,16 @@ export default function ToolbarPlugin(): JSX.Element {
       },
       COMMAND_PRIORITY_NORMAL,
     );
-  }, [activeEditor, isLink]);
+  }, [activeEditor, isLink, setIsLinkEditMode]);
 
   const applyStyleText = useCallback(
     (styles: Record<string, string>) => {
       activeEditor.update(() => {
         const selection = $getSelection();
-        if ($isRangeSelection(selection)) {
+        if (
+          $isRangeSelection(selection) ||
+          DEPRECATED_$isGridSelection(selection)
+        ) {
           $patchStyleText(selection, styles);
         }
       });
@@ -1018,6 +1095,20 @@ export default function ToolbarPlugin(): JSX.Element {
               <i className="icon table" />
               <span className="text">Table (Experimental)</span>
             </DropDownItem>
+
+            {/* <DropDownItem
+              onClick={() => {
+                showModal('Insert Columns Layout', (onClose) => (
+                  <InsertLayoutDialog
+                    activeEditor={activeEditor}
+                    onClose={onClose}
+                  />
+                ));
+              }}
+              className="item">
+              <i className="icon columns" />
+              <span className="text">Columns Layout</span>
+            </DropDownItem> */}
 
             <DropDownItem
               onClick={() => {

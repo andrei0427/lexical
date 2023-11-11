@@ -354,12 +354,17 @@ export class HeadingNode extends ElementNode {
   ): ParagraphNode | HeadingNode {
     const anchorOffet = selection ? selection.anchor.offset : 0;
     const newElement =
-      anchorOffet > 0 && anchorOffet < this.getTextContentSize()
-        ? $createHeadingNode(this.getTag())
-        : $createParagraphNode();
+      anchorOffet === this.getTextContentSize() || !selection
+        ? $createParagraphNode()
+        : $createHeadingNode(this.getTag());
     const direction = this.getDirection();
     newElement.setDirection(direction);
     this.insertAfter(newElement, restoreSelection);
+    if (anchorOffet === 0 && !this.isEmpty() && selection) {
+      const paragraph = $createParagraphNode();
+      paragraph.select();
+      this.replace(paragraph, true);
+    }
     return newElement;
   }
 
@@ -466,7 +471,7 @@ async function onCutForRichText(
 }
 
 // Clipboard may contain files that we aren't allowed to read. While the event is arguably useless,
-// in certain ocassions, we want to know whether it was a file transfer, as opposed to text. We
+// in certain occasions, we want to know whether it was a file transfer, as opposed to text. We
 // control this with the first boolean flag.
 export function eventFiles(
   event: DragEvent | PasteCommandType,

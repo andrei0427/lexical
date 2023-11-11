@@ -50,6 +50,7 @@ import FloatingTextFormatToolbarPlugin from './plugins/FloatingTextFormatToolbar
 import ImagesPlugin from './plugins/ImagesPlugin';
 import InlineImagePlugin from './plugins/InlineImagePlugin';
 import KeywordsPlugin from './plugins/KeywordsPlugin';
+import {LayoutPlugin} from './plugins/LayoutPlugin/LayoutPlugin';
 import LinkPlugin from './plugins/LinkPlugin';
 import ListMaxIndentLevelPlugin from './plugins/ListMaxIndentLevelPlugin';
 import MarkdownShortcutPlugin from './plugins/MarkdownShortcutPlugin';
@@ -99,6 +100,7 @@ export default function Editor(): JSX.Element {
     useState<HTMLDivElement | null>(null);
   const [isSmallWidthViewport, setIsSmallWidthViewport] =
     useState<boolean>(false);
+  const [isLinkEditMode, setIsLinkEditMode] = useState<boolean>(false);
 
   const onRef = (_floatingAnchorElem: HTMLDivElement) => {
     if (_floatingAnchorElem !== null) {
@@ -134,7 +136,7 @@ export default function Editor(): JSX.Element {
 
   return (
     <>
-      {isRichText && <ToolbarPlugin />}
+      {isRichText && <ToolbarPlugin setIsLinkEditMode={setIsLinkEditMode} />}
       <div
         className={`editor-container ${showTreeView ? 'tree-view' : ''} ${
           !isRichText ? 'plain-text' : ''
@@ -212,11 +214,19 @@ export default function Editor(): JSX.Element {
             <TabFocusPlugin />
             <TabIndentationPlugin />
             <CollapsiblePlugin />
+            {
+              // <PageBreakPlugin />
+              // <LayoutPlugin />
+            }
             {floatingAnchorElem && !isSmallWidthViewport && (
               <>
                 <DraggableBlockPlugin anchorElem={floatingAnchorElem} />
                 <CodeActionMenuPlugin anchorElem={floatingAnchorElem} />
-                <FloatingLinkEditorPlugin anchorElem={floatingAnchorElem} />
+                <FloatingLinkEditorPlugin
+                  anchorElem={floatingAnchorElem}
+                  isLinkEditMode={isLinkEditMode}
+                  setIsLinkEditMode={setIsLinkEditMode}
+                />
                 <TableCellActionMenuPlugin
                   anchorElem={floatingAnchorElem}
                   cellMerge={true}

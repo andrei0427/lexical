@@ -64,6 +64,7 @@ import {
   $setCompositionKey,
   getCachedClassNameArray,
   internalMarkSiblingsAsDirty,
+  isHTMLElement,
   toggleTextFormatType,
 } from '../LexicalUtils';
 import {$createLineBreakNode} from './LexicalLineBreakNode';
@@ -450,6 +451,9 @@ export class TextNode extends LexicalNode {
     const tag = outerTag === null ? innerTag : outerTag;
     const dom = document.createElement(tag);
     let innerDOM = dom;
+    if (this.hasFormat('code')) {
+      dom.setAttribute('spellcheck', 'false');
+    }
     if (outerTag !== null) {
       innerDOM = document.createElement(innerTag);
       dom.appendChild(innerDOM);
@@ -593,23 +597,25 @@ export class TextNode extends LexicalNode {
   // HTML content and not have the ability to use CSS classes.
   exportDOM(editor: LexicalEditor): DOMExportOutput {
     let {element} = super.exportDOM(editor);
-
+    invariant(
+      element !== null && isHTMLElement(element),
+      'Expected TextNode createDOM to always return a HTMLElement',
+    );
+    element.style.whiteSpace = 'pre-wrap';
     // This is the only way to properly add support for most clients,
     // even if it's semantically incorrect to have to resort to using
     // <b>, <u>, <s>, <i> elements.
-    if (element !== null) {
-      if (this.hasFormat('bold')) {
-        element = wrapElementWith(element, 'b');
-      }
-      if (this.hasFormat('italic')) {
-        element = wrapElementWith(element, 'i');
-      }
-      if (this.hasFormat('strikethrough')) {
-        element = wrapElementWith(element, 's');
-      }
-      if (this.hasFormat('underline')) {
-        element = wrapElementWith(element, 'u');
-      }
+    if (this.hasFormat('bold')) {
+      element = wrapElementWith(element, 'b');
+    }
+    if (this.hasFormat('italic')) {
+      element = wrapElementWith(element, 'i');
+    }
+    if (this.hasFormat('strikethrough')) {
+      element = wrapElementWith(element, 's');
+    }
+    if (this.hasFormat('underline')) {
+      element = wrapElementWith(element, 'u');
     }
 
     return {
@@ -1132,6 +1138,8 @@ function isNodePre(node: Node): boolean {
   return (
     node.nodeName === 'PRE' ||
     (node.nodeType === DOM_ELEMENT_TYPE &&
+      (node as HTMLElement).style !== undefined &&
+      (node as HTMLElement).style.whiteSpace !== undefined &&
       (node as HTMLElement).style.whiteSpace.startsWith('pre'))
   );
 }
